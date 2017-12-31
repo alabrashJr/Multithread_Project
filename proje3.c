@@ -3,172 +3,124 @@
 #include <pthread.h>
 #include <time.h>
 #include <semaphore.h>
+#include <unistd.h>
 
+pthread_mutex_t tras_Koltugu_Mutex; //tras koltugununn 
+sem_t semaMutex; // berbar salonunun
 
 typedef struct Koltuklar
 {
 int thread_no;
 int dolumu;
-} Koltuk;
+} Koltuk ;
 
-sem_t bekleme_Koltugu1_Mutex;
-sem_t bekleme_Koltugu2_Mutex;
-sem_t bekleme_Koltugu3_Mutex;
-pthread_t trasid;
-pthread_mutex_t tras_Koltugu_Mutex;
-sem_t semaMutex; // berbar salonu
-int mevcutSayisi=0;
-Koltuk Beklemekoltugu[3];
-Koltuk trasK;
-pthread_t tids[10];
-
-void * TrasKoltugu(void * parameter );
-
-void *BeklemeKoltugu1 (void * parameter ){
-    sem_wait(&bekleme_Koltugu1_Mutex);                          //semaphore kritik bolgesi baslangici
-    printf("34.satir\n");
-     Koltuk * offset= ( Koltuk*)parameter;
-    printf("\tK1<%d>:T%d\n",clock(),offset->thread_no);
-   if(trasK.dolumu==1)
-    printf("girildi\n");wait(TrasKoltugu);
-    //printf("40.satir\n");
-    offset->dolumu=0;
-    trasK.thread_no=offset->thread_no;
-    pthread_create(&trasid,NULL,TrasKoltugu,&trasK);
-    mevcutSayisi--;
-    pthread_join(trasid,0);
-    //pthread_mutex_lock(&tras_Koltugu_Mutex);
-     sem_post(&bekleme_Koltugu1_Mutex);                           //semaphore kritik bolgesi Bitisi
-
-}
-void *BeklemeKoltugu2(void * parameter ){
-    printf("49.satir\n");
-    sem_wait(&bekleme_Koltugu2_Mutex);                          //semaphore kritik bolgesi baslangici
-   Koltuk * offset= ( Koltuk*)parameter;
-    printf("\tK2<%d>:T%d\n ",clock(),offset->thread_no);
-    if(trasK.dolumu==1)
-       printf("girildi\n");wait(TrasKoltugu);
-    offset->dolumu=0;
-    trasK.thread_no=offset->thread_no;
-    mevcutSayisi--;
-    pthread_create(&trasid,NULL,TrasKoltugu,&trasK);
-    pthread_join(trasid,0);
-   // pthread_mutex_lock(&tras_Koltugu_Mutex);
-     sem_post(&bekleme_Koltugu2_Mutex);                           //semaphore kritik bolgesi Bitisi
-
-}
-void * BeklemeKoltugu3(void * parameter ){
-   printf("64.satir\n");
-    sem_wait(&bekleme_Koltugu3_Mutex);                          //semaphore kritik bolgesi baslangici
-    Koltuk * offset= ( Koltuk*)parameter;
-    printf("\tK3<%d>:T%d\n",clock(),offset->thread_no);
-    if(trasK.dolumu==1)
-       printf("girildi\n");wait(TrasKoltugu);
-    offset->dolumu=0;
-    trasK.thread_no=offset->thread_no;
-    mevcutSayisi--;
-    pthread_create(&trasid,NULL,TrasKoltugu,&trasK);
-    pthread_join(trasid,0);
-  //  pthread_mutex_lock(&tras_Koltugu_Mutex);
-     sem_post(&bekleme_Koltugu3_Mutex);                           //semaphore kritik bolgesi Bitisi
-
-}
-
-void * TrasKoltugu(void * parameter ){
-    printf("80.satir\n");
-   // sem_wait(&tras_Koltugu_Mutex);                           //semaphore kritik bolgesi baslangici
-    pthread_mutex_lock(&tras_Koltugu_Mutex);
-    trasK.dolumu=1;
-    printf("\tK0<%d>:T%d\n",clock(),trasK.thread_no);
-    sleep(trasK.thread_no);
-    trasK.dolumu=0;
-    pthread_mutex_unlock(&tras_Koltugu_Mutex);
-   // sem_post(&tras_Koltugu_Mutex);                           //semaphore kritik bolgesi Bitisi
-}
+Koltuk Beklemekoltugu[3]; //3 tane bekleme koltugu bulunmakta
+Koltuk trasKoltugu;	//1 tane tras koltugu bulunmakta 
 
 void *BerberSalonu(int tid){
-    int i=0;
-  //  sem_wait(&semaMutex);                           //semaphore kritik bolgesi baslangici
-    mevcutSayisi++;sleep(tid);
-    //printf("\t\t%d. Thread Kiritik Bolgede\n",tid);
-        if(Beklemekoltugu[0].dolumu==0){
-            printf("91.satir %d\n",tid);
-            Beklemekoltugu[0].dolumu=1;
-            Beklemekoltugu[0].thread_no=tid;
-            pthread_create(tids+tid,NULL,BeklemeKoltugu1,&Beklemekoltugu[0]);
-           i= pthread_join(tids[tid], 0);
-         //  pthread_mutex_lock(&tras_Koltugu_Mutex);
-        }else if(Beklemekoltugu[1].dolumu==0){
-            printf("97.satir %d\n",tid);
-            Beklemekoltugu[1].dolumu=1;
-            Beklemekoltugu[1].thread_no=tid;
-             pthread_create(tids+tid,NULL,BeklemeKoltugu2,&Beklemekoltugu[1]);
-            i=pthread_join(tids[tid], 0);
-           // pthread_mutex_lock(&tras_Koltugu_Mutex);
-        }else if(Beklemekoltugu[2].dolumu==0){
-            printf("103.satir %d\n",tid);
-            Beklemekoltugu[2].dolumu=1;
-            Beklemekoltugu[2].thread_no=tid;
-            pthread_create(tids+tid,NULL,BeklemeKoltugu3,&Beklemekoltugu[2]);
-            i=pthread_join(tids[tid], 0);
-           // pthread_mutex_lock(&tras_Koltugu_Mutex);
+    sem_wait(&semaMutex);                           //semaphore kritik bolgesi baslangici
+
+    for (int var = 0; var < 3; ++var) {             //bos olan koltuga oturturmak icin
+        if(Beklemekoltugu[var].dolumu==0){
+            Beklemekoltugu[var].dolumu=1;
+            Beklemekoltugu[var].thread_no=tid;
+            break;
         }
-        if(mevcutSayisi==4){
-                printf("Girin sayisi 4 oldu beklenyor \n");
-               // sleep(10);
-         }
-printf("%d mevcut sayisi\n",mevcutSayisi);
+    }
+    if(Beklemekoltugu[0].dolumu==0)
+             printf("K1[BOS]<>");
+         else
+             printf("K1[T%d]<>",Beklemekoltugu[0].thread_no);
 
-   // sem_post(&semaMutex);                           //semaphore kritik bolgesi Bitisi
+    if(Beklemekoltugu[1].dolumu==0)
+             printf("K2[BOS]<>");
+        else
+             printf("K2[T%d]<>",Beklemekoltugu[1].thread_no);
 
+    if(Beklemekoltugu[2].dolumu==0)
+             printf("K3[BOS]<>");
+        else
+             printf("K3[T%d]<>",Beklemekoltugu[2].thread_no);
+
+    if(trasKoltugu.thread_no==0)
+             printf("K0[BOS]\n");
+        else
+             printf("K0[T%d]\n",trasKoltugu.thread_no);
+    
+
+    TrasKoltugunaGec(tid);
+    
+
+    if(Beklemekoltugu[0].dolumu==0)
+            printf("K1[BOS]<>");
+       else
+            printf("K1[T%d]<>",Beklemekoltugu[0].thread_no);
+
+    if(Beklemekoltugu[1].dolumu==0)
+            printf("K2[BOS]<>");
+       else
+            printf("K2[T%d]<>",Beklemekoltugu[1].thread_no);
+
+    if(Beklemekoltugu[2].dolumu==0)
+            printf("K3[BOS]<>");
+       else
+            printf("K3[T%d]<>",Beklemekoltugu[2].thread_no);
+
+    if(trasKoltugu.thread_no==0)
+         printf("K0[BOS]\n");
+    else
+         printf("K0[T%d]\n",trasKoltugu.thread_no);
+
+    sem_post(&semaMutex);                           //semaphore kritik bolgesi Bitisi
+    printf("\t\t%d. Thread dükkandan ayrıldı.\n",tid);
+}
+void TrasKoltugunaGec(int tid){
+    pthread_mutex_lock(&tras_Koltugu_Mutex); // kritik bolgesi Baslangici
+
+    //diziyi guncelleniyor, trasKoltugunaGecen Thread bekleme koltugundan kaldiriyorum
+    for (int var = 0; var < 3; ++var) {
+        if(Beklemekoltugu[var].thread_no==tid){
+            Beklemekoltugu[var].dolumu=0;
+            Beklemekoltugu[var].thread_no=0;
+        }
+    }
+    trasKoltugu.thread_no=tid; //tras koltuguna gecen thread
+
+    printf("\t\t%d. Thread berber koltuğunda traş oluyor<%d>\n",tid,clock());
+
+    sleep(tid*0.5); //thread nosus saniyesince beklemede kalacaktir. 0.5ile carpma sebebi ise 10.threed yavaslatmak icin
+
+    trasKoltugu.thread_no=0;
+
+    printf("\t\t%d.  Thread berber koltuğundan kalktı<%d>\n",tid,clock());
+
+    pthread_mutex_unlock(&tras_Koltugu_Mutex);  // kritik bolgesi Bitisi
 }
 
 int main(){
-    trasK.dolumu=0; //basta Tras Koltuk bos
-    if (sem_init(&bekleme_Koltugu3_Mutex,0,1) != 0)
-            {
-        printf("\n mutex init hatasi\n");
-        return 1;
-            }
-    if (sem_init(&bekleme_Koltugu2_Mutex, 0,1) != 0)
-            {
-        printf("\n mutex init hatasi\n");
-        return 1;
-             }
-    if (sem_init(&bekleme_Koltugu1_Mutex, 0,1) != 0)
-             {
-            printf("\n mutex init hatasi\n");
+pthread_t tids[11];
+    if (sem_init(&semaMutex, 0,4) != 0)
+        {
+            printf("\n sema mutex init hatasi\n");
             return 1;
-            }
+         }
     if (pthread_mutex_init(&tras_Koltugu_Mutex, NULL) != 0)
-             {
-            printf("\n mutex init hatasi\n");
+       {
+         printf("\n mutex init hatasi\n");
             return 1;
-            }
-    if (sem_init(&semaMutex, 0, 1) != 0)
-      {
-          printf("\n semafor init hatasi\n");
-          return 1;
-      }
+       }
 
-    for (int var = 1; var <= 10; ++var) {
-          pthread_create(tids+var, NULL, BerberSalonu, var);
+    for (int var = 1; var <= 10; var++) {
+           pthread_create(&tids[var], NULL, BerberSalonu, var);
     }
-   // pthread_mutex_lock(&tras_Koltugu_Mutex);
 
-    for (int var = 1; var <= 10; ++var) {
+    for (int var = 1; var <=10; var++) {
          pthread_join(tids[var], 0);
     }
 
-
-
     sem_destroy(&semaMutex);
-    sem_destroy(&bekleme_Koltugu1_Mutex);
-    sem_destroy(&bekleme_Koltugu2_Mutex);
-    sem_destroy(&bekleme_Koltugu3_Mutex);
     pthread_mutex_destroy(&tras_Koltugu_Mutex);
 
-	
-	
 	return 0 ;
 }
+
